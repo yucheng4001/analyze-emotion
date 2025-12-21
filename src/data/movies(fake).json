@@ -1,0 +1,46 @@
+{
+  "happy": [
+    {
+      "title": "Whiplash",
+      "poster": "/posters/whiplash.jpg",
+      "rating": "輔導級",
+      "runtime": 107,
+      "platforms": [
+        { "name": "Netflix", "url": "https://www.netflix.com" }
+      ]
+    }
+  ],
+  "sad": [
+    {
+      "title": "The Pursuit of Happyness",
+      "poster": "/posters/happyness.jpg",
+      "rating": "普遍級",
+      "runtime": 117,
+      "platforms": [
+        { "name": "Disney+", "url": "https://www.disneyplus.com" }
+      ]
+    }
+  ],
+  "angry": [
+    {
+      "title": "Logan",
+      "poster": "/posters/logan.jpg",
+      "rating": "限制級",
+      "runtime": 137,
+      "platforms": [
+        { "name": "Disney+", "url": "https://www.disneyplus.com" }
+      ]
+    }
+  ],
+  "neutral": [
+    {
+      "title": "Forrest Gump",
+      "poster": "/posters/forrest.jpg",
+      "rating": "保護級",
+      "runtime": 142,
+      "platforms": [
+        { "name": "Netflix", "url": "https://www.netflix.com" }
+      ]
+    }
+  ]
+}

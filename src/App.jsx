@@ -1,7 +1,6 @@
-// GGGGGGKODKOFKDOFKDFOPDF
-
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import MovieRecommendationModal from "./MovieRecommendationModal";
 
 // --- 子頁面 1：首頁 ---
 const HomePage = ({ viewDate, setViewDate, diaries, COLORS, setEditingDate, setDiaryTitle, setSelectedEmotion, setDiaryContent, setCurrentPage }) => {
@@ -123,6 +122,7 @@ const RecommendationPage = ({ COLORS }) => {
   const [showResult, setShowResult] = useState(false);
   const [detectedEmotion, setDetectedEmotion] = useState('開心');
   const videoRef = useRef(null);
+  const [showMovieModal, setShowMovieModal] = useState(false);
 
   const startCamera = async () => {
     setShowResult(false);
@@ -216,6 +216,10 @@ const RecommendationPage = ({ COLORS }) => {
         setDetectedEmotion(pendingEmotion);
         stopCamera();
         setShowResult(true);
+        // ⭐ 延遲一點點顯示推薦
+        setTimeout(() => {
+          setShowMovieModal(true);
+        }, 1200);
       }
 
       setIsScanning(false);
@@ -277,6 +281,12 @@ const RecommendationPage = ({ COLORS }) => {
             <h3 className="text-7xl font-black mb-4" style={{ color: COLORS[detectedEmotion] }}>{detectedEmotion}</h3>
             <p className="text-gray-500 italic">為您生成專屬電影清單中...</p>
           </div>
+        )}
+        {showMovieModal && (
+          <MovieRecommendationModal
+            emotion={detectedEmotion}
+            onClose={() => setShowMovieModal(false)}
+          />
         )}
       </div>
       <div className="mt-10 flex space-x-4">

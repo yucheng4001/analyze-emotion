@@ -9,6 +9,7 @@ import base64
 import numpy as np
 from collections import Counter
 
+
 app = FastAPI()
 
 # 必須開啟 CORS，React 才能跨 Port 呼叫
