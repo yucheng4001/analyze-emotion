@@ -35,16 +35,16 @@ const HomePage = ({ viewDate, setViewDate, diaries, COLORS, setEditingDate, setD
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
             const savedData = diaries[dateStr];
             return (
-              <div 
-                key={i} 
-                onClick={() => { 
+              <div
+                key={i}
+                onClick={() => {
                   setEditingDate(dateStr);
                   const data = diaries[dateStr];
                   setDiaryTitle(data ? data.title : "");
                   setSelectedEmotion(data ? data.emotion : "開心");
                   setDiaryContent(data ? data.content : "");
-                  setCurrentPage('日記'); 
-                }} 
+                  setCurrentPage('日記');
+                }}
                 className="h-24 border-r border-b border-gray-300 p-2 relative hover:bg-orange-50 cursor-pointer"
               >
                 <span className="text-gray-700 font-medium">{i + 1}</span>
@@ -67,26 +67,26 @@ const DiaryPage = ({ editingDate, setEditingDate, diaries, diaryTitle, setDiaryT
       <div className="flex flex-row items-center justify-between mb-10">
         <div className="flex items-center flex-1 mr-10">
           <span className="text-3xl font-bold text-gray-700 mr-6 tracking-widest whitespace-nowrap">標題：</span>
-          <input 
+          <input
             key={`title-${editingDate}`}
-            type="text" 
+            type="text"
             ref={titleRef}
             defaultValue={diaryTitle}
             placeholder="請輸入今天的標題..."
             className="w-full text-2xl border-b-2 border-blue-400 outline-none py-3 px-1 focus:border-blue-600 transition-colors text-gray-700 bg-transparent font-medium"
           />
         </div>
-        <input 
-          type="date" 
-          value={editingDate} 
+        <input
+          type="date"
+          value={editingDate}
           onChange={(e) => {
             setEditingDate(e.target.value);
             const data = diaries[e.target.value];
             setDiaryTitle(data ? data.title : "");
             setSelectedEmotion(data ? data.emotion : "開心");
             setDiaryContent(data ? data.content : "");
-          }} 
-          className="text-2xl border-b-2 border-gray-300 outline-none py-2 text-gray-600 focus:border-blue-400" 
+          }}
+          className="text-2xl border-b-2 border-gray-300 outline-none py-2 text-gray-600 focus:border-blue-400"
         />
       </div>
 
@@ -99,7 +99,7 @@ const DiaryPage = ({ editingDate, setEditingDate, diaries, diaryTitle, setDiaryT
         </div>
       </div>
 
-      <textarea 
+      <textarea
         key={`content-${editingDate}`}
         ref={contentRef}
         defaultValue={diaryContent}
@@ -134,13 +134,45 @@ const RecommendationPage = ({ COLORS }) => {
     }
   };
 
-  const handleDetection = () => {
+  const handleDetection = async () => {
+    if (!videoRef.current || !videoRef.current.srcObject) return;
+
     setIsScanning(true);
-    setTimeout(() => {
-      stopCamera();
+
+    // 1. 拍照並準備資料
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(videoRef.current, 0, 0);
+    const imageData = canvas.toDataURL("image/jpeg");
+
+    try {
+      // 2. 呼叫後端 API
+      const response = await fetch("http://localhost:8000/analyze-emotion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: imageData }),
+      });
+      const data = await response.json();
+
+      if (data.emotion) {
+        setDetectedEmotion(data.emotion);
+        setShowResult(true);
+      }
+    } catch (err) {
+      console.error("辨識失敗:", err);
+    } finally {
       setIsScanning(false);
-      setShowResult(true);
-    }, 3000);
+
+      // ✅ 重點：關閉攝影機鏡頭
+      const stream = videoRef.current.srcObject;
+      if (stream) {
+        const tracks = stream.getTracks();
+        tracks.forEach(track => track.stop()); // 停止所有軌道
+        videoRef.current.srcObject = null;    // 清空影片來源
+      }
+    }
   };
 
   const stopCamera = () => {
@@ -198,7 +230,7 @@ const AnalysisPage = ({ diaries, COLORS }) => {
   const stats = useMemo(() => {
     const counts = { '生氣': 0, '開心': 0, '平淡': 0, '難過': 0 };
     const now = new Date();
-    
+
     const filteredEntries = Object.entries(diaries).filter(([dateStr]) => {
       const logDate = new Date(dateStr);
       if (filterType === 'day') return dateStr === now.toISOString().split('T')[0];
@@ -220,7 +252,7 @@ const AnalysisPage = ({ diaries, COLORS }) => {
   }, [diaries, filterType]);
 
   const totalLogs = stats.reduce((sum, item) => sum + item.value, 0);
-  
+
   // 2. 找出所有最高頻率的情緒 (處理平手)
   const topEmotions = useMemo(() => {
     if (stats.length === 0) return [];
@@ -238,9 +270,8 @@ const AnalysisPage = ({ diaries, COLORS }) => {
             <button
               key={t}
               onClick={() => setFilterType(t)}
-              className={`px-10 py-3 rounded-xl font-bold transition-all text-lg ${
-                filterType === t ? 'bg-blue-500 text-white shadow-lg' : 'text-gray-400'
-              }`}
+              className={`px-10 py-3 rounded-xl font-bold transition-all text-lg ${filterType === t ? 'bg-blue-500 text-white shadow-lg' : 'text-gray-400'
+                }`}
             >
               {t === 'day' ? '每日' : t === 'week' ? '每週' : '每月'}
             </button>
@@ -251,17 +282,17 @@ const AnalysisPage = ({ diaries, COLORS }) => {
       {totalLogs > 0 ? (
         /* 外層大框格：寬度 max-w-6xl，垂直內距加大 p-20 */
         <div className="w-full max-w-6xl bg-white rounded-[50px] shadow-2xl p-16 md:p-20 flex flex-col md:flex-row items-stretch border border-orange-50">
-          
+
           {/* 左側：加大圓餅圖，不再限制高度 */}
           <div className="w-full md:w-1/2 flex items-center justify-center relative min-h-[450px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie 
-                  data={stats} 
-                  innerRadius={110} 
-                  outerRadius={180} 
-                  paddingAngle={10} 
-                  dataKey="value" 
+                <Pie
+                  data={stats}
+                  innerRadius={110}
+                  outerRadius={180}
+                  paddingAngle={10}
+                  dataKey="value"
                   stroke="none"
                 >
                   {stats.map((entry, index) => (
@@ -331,8 +362,8 @@ const AnalysisPage = ({ diaries, COLORS }) => {
 // --- 主組件 App (加入持久化儲存) ---
 const App = () => {
   const [currentPage, setCurrentPage] = useState('首頁');
-  const [viewDate, setViewDate] = useState(new Date()); 
-  
+  const [viewDate, setViewDate] = useState(new Date());
+
   // 初始化時從 LocalStorage 讀取資料
   const [diaries, setDiaries] = useState(() => {
     const saved = localStorage.getItem('emotion_diaries');
@@ -340,7 +371,7 @@ const App = () => {
   });
 
   const [editingDate, setEditingDate] = useState(new Date().toISOString().split('T')[0]);
-  const [diaryTitle, setDiaryTitle] = useState(""); 
+  const [diaryTitle, setDiaryTitle] = useState("");
   const [selectedEmotion, setSelectedEmotion] = useState('開心');
   const [diaryContent, setDiaryContent] = useState("");
 
@@ -356,9 +387,9 @@ const App = () => {
   const handleSaveDiary = () => {
     const finalTitle = titleRef.current ? titleRef.current.value : diaryTitle;
     const finalContent = contentRef.current ? contentRef.current.value : diaryContent;
-    setDiaries(prev => ({ 
-      ...prev, 
-      [editingDate]: { emotion: selectedEmotion, title: finalTitle, content: finalContent } 
+    setDiaries(prev => ({
+      ...prev,
+      [editingDate]: { emotion: selectedEmotion, title: finalTitle, content: finalContent }
     }));
     alert(`儲存成功！`);
     setCurrentPage('首頁');
