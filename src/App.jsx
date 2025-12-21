@@ -134,52 +134,120 @@ const RecommendationPage = ({ COLORS }) => {
     }
   };
 
-  const handleDetection = async () => {
-    if (!videoRef.current || !videoRef.current.srcObject) return;
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject;
+      const tracks = stream.getTracks();
+      tracks.forEach(track => track.stop()); // 徹底關閉硬體
+      videoRef.current.srcObject = null;
+    }
+    setIsStreamActive(false);
+  };
 
-    setIsScanning(true);
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
-    // 1. 拍照並準備資料
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const captureFrames = async (durationMs = 3000, intervalMs = 300) => {
+    const video = videoRef.current;
+    if (!video) return [];
+    if (!video.videoWidth || !video.videoHeight) return [];
+
+    const frames = [];
     const canvas = document.createElement("canvas");
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(videoRef.current, 0, 0);
-    const imageData = canvas.toDataURL("image/jpeg");
+
+    const start = performance.now();
+    while (performance.now() - start < durationMs) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      frames.push(canvas.toDataURL("image/jpeg", 0.8));
+      await sleep(intervalMs);
+    }
+
+    return frames;
+  };
+
+  const handleDetection = async () => {
+    if (!videoRef.current) return;
+    setIsScanning(true);
+    let pendingEmotion = detectedEmotion;
+    let shouldShowResult = false;
+    let errorMessage = null;
 
     try {
-      // 2. 呼叫後端 API
+      await waitForVideoReady();
+      const frames = await captureFrames();
+      if (frames.length === 0) {
+        throw new Error("未能擷取到足夠的影像畫格，請重新嘗試。");
+      }
+
       const response = await fetch("http://localhost:8000/analyze-emotion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: imageData }),
+        body: JSON.stringify({ frames }),
       });
+
+      if (!response.ok) {
+        throw new Error("辨識服務回應異常。");
+      }
+
       const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
 
       if (data.emotion) {
-        setDetectedEmotion(data.emotion);
-        setShowResult(true);
+        pendingEmotion = data.emotion;
+        shouldShowResult = true;
       }
     } catch (err) {
       console.error("辨識失敗:", err);
+      errorMessage = err.message || "無法連線至辨識伺服器，請確保後端已啟動。";
     } finally {
+      if (shouldShowResult) {
+        setDetectedEmotion(pendingEmotion);
+        stopCamera();
+        setShowResult(true);
+      }
+
       setIsScanning(false);
 
-      // ✅ 重點：關閉攝影機鏡頭
-      const stream = videoRef.current.srcObject;
-      if (stream) {
-        const tracks = stream.getTracks();
-        tracks.forEach(track => track.stop()); // 停止所有軌道
-        videoRef.current.srcObject = null;    // 清空影片來源
+      if (errorMessage) {
+        alert(errorMessage);
       }
     }
   };
 
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-      setIsStreamActive(false);
+  const waitForVideoReady = () => new Promise((resolve) => {
+    const video = videoRef.current;
+    if (!video) {
+      resolve();
+      return;
     }
+    if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+      resolve();
+      return;
+    }
+    const handleLoaded = () => {
+      video.removeEventListener("loadeddata", handleLoaded);
+      resolve();
+    };
+    video.addEventListener("loadeddata", handleLoaded, { once: true });
+  });
+
+  const handleRedetect = async () => {
+    if (isScanning) return;
+    setShowResult(false);
+    stopCamera();
+    await startCamera();
+    if (!videoRef.current || !videoRef.current.srcObject) return;
+    await handleDetection();
   };
 
   return (
@@ -210,13 +278,18 @@ const RecommendationPage = ({ COLORS }) => {
         )}
       </div>
       <div className="mt-10 flex space-x-4">
-        {!isStreamActive && !showResult ? (
-          <button onClick={startCamera} className="bg-blue-600 text-white px-12 py-4 rounded-full font-bold text-xl shadow-lg">開啟鏡頭</button>
-        ) : isStreamActive && !isScanning ? (
-          <button onClick={handleDetection} className="bg-purple-600 text-white px-12 py-4 rounded-full font-bold text-xl shadow-lg animate-bounce">開始辨識表情</button>
-        ) : (
-          <button onClick={() => { setShowResult(false); startCamera(); }} className="bg-gray-200 text-gray-600 px-12 py-4 rounded-full font-bold text-xl">重新測試</button>
-        )}
+        {(() => {
+          if (!isStreamActive && !showResult) {
+            return <button onClick={startCamera} className="bg-blue-600 text-white px-12 py-4 rounded-full font-bold text-xl shadow-lg">開啟鏡頭</button>;
+          }
+          if (isStreamActive && !isScanning) {
+            return <button onClick={handleDetection} className="bg-purple-600 text-white px-12 py-4 rounded-full font-bold text-xl shadow-lg animate-bounce">開始辨識表情</button>;
+          }
+          if (showResult && !isScanning) {
+            return <button onClick={handleRedetect} className="bg-gray-200 text-gray-600 px-12 py-4 rounded-full font-bold text-xl">重新辨識</button>;
+          }
+          return <button disabled className="bg-gray-300 text-gray-500 px-12 py-4 rounded-full font-bold text-xl cursor-not-allowed">辨識中...</button>;
+        })()}
       </div>
     </div>
   );
