@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import MovieRecommendationModal from "./MovieRecommendationModal";
+
 
 // --- 子頁面 1：首頁 ---
 const HomePage = ({ viewDate, setViewDate, diaries, COLORS, setEditingDate, setDiaryTitle, setSelectedEmotion, setDiaryContent, setCurrentPage }) => {
@@ -123,6 +123,8 @@ const RecommendationPage = ({ COLORS }) => {
   const [detectedEmotion, setDetectedEmotion] = useState('開心');
   const videoRef = useRef(null);
   const [showMovieModal, setShowMovieModal] = useState(false);
+  const [movies, setMovies] = useState([]);
+
 
   const startCamera = async () => {
     setShowResult(false);
@@ -206,8 +208,17 @@ const RecommendationPage = ({ COLORS }) => {
 
       if (data.emotion) {
         pendingEmotion = data.emotion;
+
+        const movieRes = await fetch(
+          `http://localhost:8000/recommend-movies?emotion=${data.emotion}`
+        );
+        const movieData = await movieRes.json();
+        setMovies(movieData.movies || []);
+
         shouldShowResult = true;
       }
+
+
     } catch (err) {
       console.error("辨識失敗:", err);
       errorMessage = err.message || "無法連線至辨識伺服器，請確保後端已啟動。";
@@ -216,12 +227,9 @@ const RecommendationPage = ({ COLORS }) => {
         setDetectedEmotion(pendingEmotion);
         stopCamera();
         setShowResult(true);
-        // ⭐ 延遲一點點顯示推薦
-        setTimeout(() => {
-          setShowMovieModal(true);
-        }, 1200);
+        setShowMovieModal(true);
       }
-
+      
       setIsScanning(false);
 
       if (errorMessage) {
@@ -282,12 +290,50 @@ const RecommendationPage = ({ COLORS }) => {
             <p className="text-gray-500 italic">為您生成專屬電影清單中...</p>
           </div>
         )}
-        {showMovieModal && (
-          <MovieRecommendationModal
-            emotion={detectedEmotion}
-            onClose={() => setShowMovieModal(false)}
-          />
+        {showResult && showMovieModal && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-white rounded-3xl p-8 max-w-3xl w-full shadow-2xl relative">
+              <button
+                onClick={() => setShowMovieModal(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-black"
+              >
+                ✕
+              </button>
+
+              <h2 className="text-3xl font-black mb-6 text-center">
+                🎬 為您推薦的電影
+              </h2>
+
+              <div className="space-y-6">
+                {movies.map((m, idx) => (
+                  <div key={idx} className="border rounded-2xl p-4">
+                    <h3 className="text-xl font-bold">
+                      {m.title.zh} ({m.title.en})
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      導演：{m.director}
+                    </p>
+                    <p className="text-sm">
+                      類型：{m.genres.join(" / ")}｜片長：{m.runtime} 分鐘
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      上映日期：{m.release_date}
+                    </p>
+                    <a
+                      href={m.trailer}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-block mt-2 text-blue-600 font-bold"
+                    >
+                      ▶ 查看預告片
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
+
       </div>
       <div className="mt-10 flex space-x-4">
         {(() => {

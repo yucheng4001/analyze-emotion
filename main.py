@@ -8,6 +8,9 @@ import cv2
 import base64
 import numpy as np
 from collections import Counter
+import json
+from typing import List
+
 
 
 app = FastAPI()
@@ -126,3 +129,20 @@ async def analyze_emotion(payload: dict = Body(...)):
         }
     except Exception as e:
         return {"error": str(e)}
+    
+with open("src\\data\\movie.json", "r", encoding="utf-8") as f:
+    MOVIES_DB = json.load(f)
+
+@app.get("/recommend-movies")
+def recommend_movies(emotion: str):
+    results = [
+        m for m in MOVIES_DB
+        if m.get("emotion") == emotion
+        and isinstance(m.get("title"), dict)
+        and "zh" in m["title"]
+        and "en" in m["title"]
+    ]
+    return {
+        "emotion": emotion,
+        "movies": results
+    }

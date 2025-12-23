@@ -1,0 +1,185 @@
+[
+  {
+    "emotion": "happy",
+    "title": { "zh": "逆轉人生", "en": "The Intouchables" },
+    "trailer": "https://www.youtube.com/watch?v=34WIbmXkewU",
+    "release_date": "2011-11-02",
+    "genres": ["Drama", "Comedy"],
+    "runtime": 112,
+    "director": "Olivier Nakache, Éric Toledano"
+  },
+  {
+    "emotion": "happy",
+    "title": { "zh": "奇蹟男孩", "en": "Wonder" },
+    "trailer": "https://www.youtube.com/watch?v=Ob7fPOzbmzE",
+    "release_date": "2017-11-17",
+    "genres": ["Drama", "Family"],
+    "runtime": 113,
+    "director": "Stephen Chbosky"
+  },
+  {
+    "emotion": "happy",
+    "title": { "zh": "白日夢冒險王", "en": "The Secret Life of Walter Mitty" },
+    "trailer": "https://www.youtube.com/watch?v=QD6cy4PBQPI",
+    "release_date": "2013-12-25",
+    "genres": ["Adventure", "Drama"],
+    "runtime": 114,
+    "director": "Ben Stiller"
+  },
+  {
+    "emotion": "happy",
+    "title": { "zh": "真愛每一天", "en": "About Time" },
+    "trailer": "https://www.youtube.com/watch?v=S2U2D6jN6RY",
+    "release_date": "2013-11-08",
+    "genres": ["Romance", "Drama"],
+    "runtime": 123,
+    "director": "Richard Curtis"
+  },
+  {
+    "emotion": "happy",
+    "title": { "zh": "料理鼠王", "en": "Ratatouille" },
+    "trailer": "https://www.youtube.com/watch?v=PeFGdSrFTUw",
+    "release_date": "2007-06-29",
+    "genres": ["Animation", "Family"],
+    "runtime": 111,
+    "director": "Brad Bird"
+  },
+
+  {
+    "emotion": "neutral",
+    "title": { "zh": "小鬼當家", "en": "Home Alone" },
+    "trailer": "https://www.youtube.com/watch?v=dzdpqRGA1qc",
+    "release_date": "1990-11-16",
+    "genres": ["Comedy", "Family"],
+    "runtime": 103,
+    "director": "Chris Columbus"
+  },
+  {
+    "emotion": "neutral",
+    "title": { "zh": "醉後大丈夫", "en": "The Hangover" },
+    "trailer": "https://www.youtube.com/watch?v=TZc39afdeXU",
+    "release_date": "2009-06-05",
+    "genres": ["Comedy"],
+    "runtime": 100,
+    "director": "Todd Phillips"
+  },
+  {
+    "emotion": "neutral",
+    "title": { "zh": "辣妹過招", "en": "Mean Girls" },
+    "trailer": "https://www.youtube.com/watch?v=EMzEmGfTuM4",
+    "release_date": "2004-04-30",
+    "genres": ["Comedy"],
+    "runtime": 97,
+    "director": "Mark Waters"
+  },
+  {
+    "emotion": "neutral",
+    "title": { "zh": "神偷奶爸", "en": "Despicable Me" },
+    "trailer": "https://www.youtube.com/watch?v=zzCZ1W_CUoI",
+    "release_date": "2010-07-09",
+    "genres": ["Animation", "Comedy"],
+    "runtime": 95,
+    "director": "Pierre Coffin, Chris Renaud"
+  },
+  {
+    "emotion": "neutral",
+    "title": { "zh": "史瑞克", "en": "Shrek" },
+    "trailer": "https://www.youtube.com/watch?v=CwXOrWvPBPk",
+    "release_date": "2001-05-18",
+    "genres": ["Animation", "Comedy"],
+    "runtime": 90,
+    "director": "Andrew Adamson, Vicky Jenson"
+  },
+
+  {
+    "emotion": "sad",
+    "title": { "zh": "鐵達尼號", "en": "Titanic" },
+    "trailer": "https://www.youtube.com/watch?v=kVrqfYjkTdQ",
+    "release_date": "1997-12-19",
+    "genres": ["Drama", "Romance"],
+    "runtime": 195,
+    "director": "James Cameron"
+  },
+  {
+    "emotion": "sad",
+    "title": { "zh": "忠犬小八", "en": "Hachi: A Dog's Tale" },
+    "trailer": "https://www.youtube.com/watch?v=Y6U7mAnPtw4",
+    "release_date": "2009-06-13",
+    "genres": ["Drama", "Family"],
+    "runtime": 93,
+    "director": "Lasse Hallström"
+  },
+  {
+    "emotion": "sad",
+    "title": { "zh": "螢火蟲之墓", "en": "Grave of the Fireflies" },
+    "trailer": "https://www.youtube.com/watch?v=4vPeTSRd580",
+    "release_date": "1988-04-16",
+    "genres": ["Animation", "Drama"],
+    "runtime": 89,
+    "director": "Isao Takahata"
+  },
+  {
+    "emotion": "sad",
+    "title": { "zh": "海邊的曼徹斯特", "en": "Manchester by the Sea" },
+    "trailer": "https://www.youtube.com/watch?v=gsVoD0pTge0",
+    "release_date": "2016-11-18",
+    "genres": ["Drama"],
+    "runtime": 137,
+    "director": "Kenneth Lonergan"
+  },
+  {
+    "emotion": "sad",
+    "title": { "zh": "戰地琴人", "en": "The Pianist" },
+    "trailer": "https://www.youtube.com/watch?v=BFwGqLa_oAo",
+    "release_date": "2002-09-25",
+    "genres": ["Drama", "War"],
+    "runtime": 150,
+    "director": "Roman Polanski"
+  },
+
+  {
+    "emotion": "angry",
+    "title": { "zh": "小丑", "en": "Joker" },
+    "trailer": "https://www.youtube.com/watch?v=zAGVQLHvwOY",
+    "release_date": "2019-10-04",
+    "genres": ["Crime", "Drama"],
+    "runtime": 122,
+    "director": "Todd Phillips"
+  },
+  {
+    "emotion": "angry",
+    "title": { "zh": "進擊的鼓手", "en": "Whiplash" },
+    "trailer": "https://www.youtube.com/watch?v=7d_jQycdQGo",
+    "release_date": "2014-10-10",
+    "genres": ["Drama"],
+    "runtime": 106,
+    "director": "Damien Chazelle"
+  },
+  {
+    "emotion": "angry",
+    "title": { "zh": "捍衛任務", "en": "John Wick" },
+    "trailer": "https://www.youtube.com/watch?v=C0BMx-qxsP4",
+    "release_date": "2014-10-24",
+    "genres": ["Action", "Thriller"],
+    "runtime": 101,
+    "director": "Chad Stahelski"
+  },
+  {
+    "emotion": "angry",
+    "title": { "zh": "追殺比爾", "en": "Kill Bill" },
+    "trailer": "https://www.youtube.com/watch?v=7kSuas6mRpk",
+    "release_date": "2003-10-10",
+    "genres": ["Action"],
+    "runtime": 111,
+    "director": "Quentin Tarantino"
+  },
+  {
+    "emotion": "angry",
+    "title": { "zh": "V怪客", "en": "V for Vendetta" },
+    "trailer": "https://www.youtube.com/watch?v=lSA7mAHolAw",
+    "release_date": "2006-03-17",
+    "genres": ["Action", "Drama"],
+    "runtime": 132,
+    "director": "James McTeigue"
+  }
+]
