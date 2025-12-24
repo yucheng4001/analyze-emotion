@@ -1,5 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import mqtt from 'mqtt';
+
 
 
 // --- 子頁面 1：首頁 ---
@@ -124,7 +126,7 @@ const RecommendationPage = ({ COLORS }) => {
   const videoRef = useRef(null);
   const [showMovieModal, setShowMovieModal] = useState(false);
   const [movies, setMovies] = useState([]);
-
+  const wsRef = useRef(null);
 
   const startCamera = async () => {
     setShowResult(false);
@@ -263,6 +265,24 @@ const RecommendationPage = ({ COLORS }) => {
     if (!videoRef.current || !videoRef.current.srcObject) return;
     await handleDetection();
   };
+
+  // 建立 WebSocket 連線
+  useEffect(() => {
+    wsRef.current = new WebSocket("ws://localhost:8000/ws/button");
+    wsRef.current.onmessage = (event) => {
+      if (event.data === "ok") {
+        console.log("收到 HUB 按鈕訊號 → 自動開啟鏡頭");
+        if (!isStreamActive && !showResult) {
+          startCamera();
+        } else if (isStreamActive && !isScanning) {
+          handleDetection();
+        }
+      }
+    };
+    return () => {
+      wsRef.current.close();
+    };
+  }, [isStreamActive, showResult, isScanning]);
 
   return (
     <div className="p-10 flex flex-col items-center min-h-screen">

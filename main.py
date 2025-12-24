@@ -1,7 +1,8 @@
 import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # 減少 TensorFlow 的日誌干擾
-from fastapi import FastAPI, Body
+
+from fastapi import FastAPI, Body, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from deepface import DeepFace
 import cv2
@@ -10,8 +11,8 @@ import numpy as np
 from collections import Counter
 import json
 from typing import List
-
-
+import asyncio
+import paho.mqtt.client as mqtt
 
 app = FastAPI()
 
@@ -146,3 +147,46 @@ def recommend_movies(emotion: str):
         "emotion": emotion,
         "movies": results
     }
+
+# MQTT & WebSocket
+clients = set()
+
+@app.websocket("/ws/button")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    clients.add(websocket)
+    try:
+        while True:
+            await asyncio.sleep(1)
+    except Exception as e:
+        print("WebSocket disconnected:", e)
+    finally:
+        clients.remove(websocket)
+
+# ===== MQTT 客戶端訂閱 HUB topic =====
+mqtt_client = mqtt.Client()
+
+def on_connect(client, userdata, flags, rc):
+    print("[MQTT] Connected with result code "+str(rc))
+    client.subscribe("hub/button")
+
+def on_message(client, userdata, msg):
+    payload = msg.payload.decode()
+    print(f"[MQTT] Received: {payload}")
+    # 將訊息推送給所有 WebSocket clients
+    asyncio.run(send_to_clients(payload))
+
+async def send_to_clients(message: str):
+    to_remove = set()
+    for ws in clients:
+        try:
+            await ws.send_text(message)
+        except:
+            to_remove.add(ws)
+    for ws in to_remove:
+        clients.remove(ws)
+
+mqtt_client.on_connect = on_connect
+mqtt_client.on_message = on_message
+mqtt_client.connect("mqttgo.io", 1883, 60)
+mqtt_client.loop_start()
