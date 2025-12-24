@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import mqtt from 'mqtt';
 
@@ -37,6 +37,11 @@ const HomePage = ({ viewDate, setViewDate, diaries, COLORS, setEditingDate, setD
           {[...Array(daysInMonth)].map((_, i) => {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
             const savedData = diaries[dateStr];
+            const tooltipMovies = Array.isArray(savedData?.recommendedMovies) ? savedData.recommendedMovies : [];
+            const hasDetection = Boolean(savedData?.detectedEmotion || tooltipMovies.length > 0);
+            const emotionLabel = savedData?.detectedEmotion || savedData?.emotion;
+            const bubbleColor = emotionLabel && COLORS[emotionLabel] ? COLORS[emotionLabel] : null;
+
             return (
               <div
                 key={i}
@@ -48,11 +53,43 @@ const HomePage = ({ viewDate, setViewDate, diaries, COLORS, setEditingDate, setD
                   setDiaryContent(data ? data.content : "");
                   setCurrentPage('日記');
                 }}
-                className="h-24 border-r border-b border-gray-300 p-2 relative hover:bg-orange-50 cursor-pointer"
+                className="group h-24 border-r border-b border-gray-300 p-2 relative hover:bg-orange-50 cursor-pointer transition-colors"
               >
                 <span className="text-gray-700 font-medium">{i + 1}</span>
-                {savedData && (
-                  <div className="absolute bottom-2 right-2 w-5 h-5 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: COLORS[savedData.emotion] }}></div>
+                {hasDetection && emotionLabel && (
+                  <p className="mt-1 pr-6 text-[11px] leading-snug text-gray-600">
+                    當日心情：{emotionLabel}
+                  </p>
+                )}
+                {hasDetection && (
+                  <span className="absolute bottom-2 left-2 text-[10px] font-semibold text-blue-500">
+                    已推薦電影
+                  </span>
+                )}
+                {bubbleColor && (
+                  <div
+                    className="absolute top-2 right-2 w-5 h-5 rounded-full border-2 border-white shadow-sm"
+                    style={{ backgroundColor: bubbleColor }}
+                  ></div>
+                )}
+                {hasDetection && (
+                  <div className="pointer-events-none absolute left-1/2 bottom-full z-20 hidden w-56 -translate-x-1/2 flex-col rounded-xl bg-gray-900/95 px-4 py-3 text-white shadow-xl ring-1 ring-black/10 group-hover:flex">
+                    <p className="text-xs font-semibold tracking-wide text-amber-300">已推薦電影</p>
+                    {tooltipMovies.length > 0 ? (
+                      <ul className="mt-2 space-y-1">
+                        {tooltipMovies.slice(0, 3).map((movie, idx) => (
+                          <li key={idx} className="text-xs leading-snug">
+                            {movie?.title?.zh || movie?.title?.en || movie?.title || '未命名作品'}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-[11px] text-gray-300">目前沒有可顯示的推薦清單。</p>
+                    )}
+                    {tooltipMovies.length > 3 && (
+                      <p className="mt-2 text-[11px] text-gray-300">還有 {tooltipMovies.length - 3} 部推薦</p>
+                    )}
+                  </div>
                 )}
               </div>
             );
@@ -118,7 +155,7 @@ const DiaryPage = ({ editingDate, setEditingDate, diaries, diaryTitle, setDiaryT
 );
 
 // --- 子頁面 3：推薦頁 ---
-const RecommendationPage = ({ COLORS }) => {
+const RecommendationPage = ({ COLORS, onDetectionResult }) => {
   const [isStreamActive, setIsStreamActive] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [showResult, setShowResult] = useState(false);
@@ -214,8 +251,18 @@ const RecommendationPage = ({ COLORS }) => {
         const movieRes = await fetch(
           `http://localhost:8000/recommend-movies?emotion=${data.emotion}`
         );
+
+        if (!movieRes.ok) {
+          throw new Error("推薦服務回應異常。");
+        }
+
         const movieData = await movieRes.json();
-        setMovies(movieData.movies || []);
+        const movieList = Array.isArray(movieData.movies) ? movieData.movies : [];
+        setMovies(movieList);
+
+        if (typeof onDetectionResult === "function") {
+          onDetectionResult({ emotion: pendingEmotion, movies: movieList });
+        }
 
         shouldShowResult = true;
       }
@@ -265,6 +312,39 @@ const RecommendationPage = ({ COLORS }) => {
     if (!videoRef.current || !videoRef.current.srcObject) return;
     await handleDetection();
   };
+  // 模擬辨識結果按鈕處理函式
+  // const handleMockDetection = () => {
+  //   if (isScanning) return;
+  //   stopCamera();
+  //   const mockEmotion = '開心';
+  //   const mockMovies = [
+  //     {
+  //       title: { zh: '天氣之子', en: 'Weathering With You' },
+  //       director: '新海誠',
+  //       genres: ['動畫', '奇幻'],
+  //       runtime: 112,
+  //       release_date: '2019-07-19',
+  //       trailer: 'https://www.youtube.com/watch?v=Q6iK6DjV_iE',
+  //     },
+  //     {
+  //       title: { zh: '怪獸與牠們的產地', en: 'Fantastic Beasts and Where to Find Them' },
+  //       director: 'David Yates',
+  //       genres: ['奇幻', '冒險'],
+  //       runtime: 133,
+  //       release_date: '2016-11-18',
+  //       trailer: 'https://www.youtube.com/watch?v=ViuDsy7yb8M',
+  //     },
+  //   ];
+
+  //   setDetectedEmotion(mockEmotion);
+  //   setMovies(mockMovies);
+  //   setShowResult(true);
+  //   setShowMovieModal(true);
+
+  //   if (typeof onDetectionResult === 'function') {
+  //     onDetectionResult({ emotion: mockEmotion, movies: mockMovies });
+  //   }
+  // };
 
   // 建立 WebSocket 連線
   useEffect(() => {
@@ -369,6 +449,14 @@ const RecommendationPage = ({ COLORS }) => {
           return <button disabled className="bg-gray-300 text-gray-500 px-12 py-4 rounded-full font-bold text-xl cursor-not-allowed">辨識中...</button>;
         })()}
       </div>
+      {/* <div className="mt-4">
+        <button
+          onClick={handleMockDetection}
+          className="rounded-full border border-dashed border-gray-400 px-6 py-2 text-sm font-semibold text-gray-500 transition hover:border-gray-600 hover:text-gray-700"
+        >
+          模擬辨識結果
+        </button>
+      </div> */}
     </div>
   );
 };
@@ -530,6 +618,30 @@ const App = () => {
   const titleRef = useRef(null);
   const contentRef = useRef(null);
 
+  const handleDetectionLog = useCallback(({ emotion, movies }) => {
+    const now = new Date();
+    const dateKey = now.toISOString().split('T')[0];
+
+    setDiaries(prev => {
+      const prevEntry = prev[dateKey] && typeof prev[dateKey] === 'object' ? prev[dateKey] : {};
+      const movieList = Array.isArray(movies) ? movies : [];
+      const detectedEmotion = emotion || prevEntry.detectedEmotion || prevEntry.emotion || '平淡';
+
+      return {
+        ...prev,
+        [dateKey]: {
+          ...prevEntry,
+          title: prevEntry.title ?? '',
+          content: prevEntry.content ?? '',
+          emotion: detectedEmotion,
+          detectedEmotion,
+          recommendedMovies: movieList,
+          lastDetectedAt: now.toISOString(),
+        },
+      };
+    });
+  }, [setDiaries]);
+
   // 當 diaries 更新時，自動存入 LocalStorage
   useEffect(() => {
     localStorage.setItem('emotion_diaries', JSON.stringify(diaries));
@@ -556,7 +668,7 @@ const App = () => {
       <main className="container mx-auto">
         {currentPage === '首頁' && <HomePage viewDate={viewDate} setViewDate={setViewDate} diaries={diaries} COLORS={COLORS} setEditingDate={setEditingDate} setDiaryTitle={setDiaryTitle} setSelectedEmotion={setSelectedEmotion} setDiaryContent={setDiaryContent} setCurrentPage={setCurrentPage} />}
         {currentPage === '日記' && <DiaryPage editingDate={editingDate} setEditingDate={setEditingDate} diaries={diaries} diaryTitle={diaryTitle} setDiaryTitle={setDiaryTitle} selectedEmotion={selectedEmotion} setSelectedEmotion={setSelectedEmotion} diaryContent={diaryContent} setDiaryContent={setDiaryContent} handleSaveDiary={handleSaveDiary} titleRef={titleRef} contentRef={contentRef} COLORS={COLORS} />}
-        {currentPage === '推薦' && <RecommendationPage COLORS={COLORS} />}
+        {currentPage === '推薦' && <RecommendationPage COLORS={COLORS} onDetectionResult={handleDetectionLog} />}
         {currentPage === '分析' && <AnalysisPage diaries={diaries} COLORS={COLORS} />}
       </main>
     </div>
