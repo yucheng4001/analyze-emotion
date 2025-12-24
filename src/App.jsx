@@ -41,6 +41,7 @@ const HomePage = ({ viewDate, setViewDate, diaries, COLORS, setEditingDate, setD
             const hasDetection = Boolean(savedData?.detectedEmotion || tooltipMovies.length > 0);
             const emotionLabel = savedData?.detectedEmotion || savedData?.emotion;
             const bubbleColor = emotionLabel && COLORS[emotionLabel] ? COLORS[emotionLabel] : null;
+            const hasDiaryContent = Boolean(savedData?.content);
 
             return (
               <div
@@ -49,7 +50,7 @@ const HomePage = ({ viewDate, setViewDate, diaries, COLORS, setEditingDate, setD
                   setEditingDate(dateStr);
                   const data = diaries[dateStr];
                   setDiaryTitle(data ? data.title : "");
-                  setSelectedEmotion(data ? data.emotion : "開心");
+                  setSelectedEmotion(data ? data.emotion : "");
                   setDiaryContent(data ? data.content : "");
                   setCurrentPage('日記');
                 }}
@@ -61,9 +62,11 @@ const HomePage = ({ viewDate, setViewDate, diaries, COLORS, setEditingDate, setD
                     當日心情：{emotionLabel}
                   </p>
                 )}
-                {hasDetection && (
-                  <span className="absolute bottom-2 left-2 text-[10px] font-semibold text-blue-500">
-                    已推薦電影
+                {(hasDetection || hasDiaryContent) && (
+                  <span className="absolute bottom-2 left-2 flex items-center text-[10px] font-semibold">
+                    {hasDetection && <span className="text-blue-500">已推薦電影</span>}
+                    {hasDetection && hasDiaryContent && <span className="mx-1 text-gray-400">|</span>}
+                    {hasDiaryContent && <span className="text-emerald-500">已留下日記</span>}
                   </span>
                 )}
                 {bubbleColor && (
@@ -123,7 +126,7 @@ const DiaryPage = ({ editingDate, setEditingDate, diaries, diaryTitle, setDiaryT
             setEditingDate(e.target.value);
             const data = diaries[e.target.value];
             setDiaryTitle(data ? data.title : "");
-            setSelectedEmotion(data ? data.emotion : "開心");
+            setSelectedEmotion(data ? data.emotion : "");
             setDiaryContent(data ? data.content : "");
           }}
           className="text-2xl border-b-2 border-gray-300 outline-none py-2 text-gray-600 focus:border-blue-400"
@@ -304,38 +307,38 @@ const RecommendationPage = ({ COLORS, onDetectionResult }) => {
     await handleDetection();
   };
   // 模擬辨識結果按鈕處理函式
-  const handleMockDetection = () => {
-    if (isScanning) return;
-    stopCamera();
-    const mockEmotion = '開心';
-    const mockMovies = [
-      {
-        title: { zh: '天氣之子', en: 'Weathering With You' },
-        director: '新海誠',
-        genres: ['動畫', '奇幻'],
-        runtime: 112,
-        release_date: '2019-07-19',
-        trailer: 'https://www.youtube.com/watch?v=Q6iK6DjV_iE',
-      },
-      {
-        title: { zh: '怪獸與牠們的產地', en: 'Fantastic Beasts and Where to Find Them' },
-        director: 'David Yates',
-        genres: ['奇幻', '冒險'],
-        runtime: 133,
-        release_date: '2016-11-18',
-        trailer: 'https://www.youtube.com/watch?v=ViuDsy7yb8M',
-      },
-    ];
+  // const handleMockDetection = () => {
+  //   if (isScanning) return;
+  //   stopCamera();
+  //   const mockEmotion = '開心';
+  //   const mockMovies = [
+  //     {
+  //       title: { zh: '天氣之子', en: 'Weathering With You' },
+  //       director: '新海誠',
+  //       genres: ['動畫', '奇幻'],
+  //       runtime: 112,
+  //       release_date: '2019-07-19',
+  //       trailer: 'https://www.youtube.com/watch?v=Q6iK6DjV_iE',
+  //     },
+  //     {
+  //       title: { zh: '怪獸與牠們的產地', en: 'Fantastic Beasts and Where to Find Them' },
+  //       director: 'David Yates',
+  //       genres: ['奇幻', '冒險'],
+  //       runtime: 133,
+  //       release_date: '2016-11-18',
+  //       trailer: 'https://www.youtube.com/watch?v=ViuDsy7yb8M',
+  //     },
+  //   ];
 
-    setDetectedEmotion(mockEmotion);
-    setMovies(mockMovies);
-    setShowResult(true);
-    setShowMovieModal(true);
+  //   setDetectedEmotion(mockEmotion);
+  //   setMovies(mockMovies);
+  //   setShowResult(true);
+  //   setShowMovieModal(true);
 
-    if (typeof onDetectionResult === 'function') {
-      onDetectionResult({ emotion: mockEmotion, movies: mockMovies });
-    }
-  };
+  //   if (typeof onDetectionResult === 'function') {
+  //     onDetectionResult({ emotion: mockEmotion, movies: mockMovies });
+  //   }
+  // };
 
   // 建立 WebSocket 連線
   useEffect(() => {
@@ -440,14 +443,18 @@ const RecommendationPage = ({ COLORS, onDetectionResult }) => {
           return <button disabled className="bg-gray-300 text-gray-500 px-12 py-4 rounded-full font-bold text-xl cursor-not-allowed">辨識中...</button>;
         })()}
       </div>
-      <div className="mt-4">
+
+      {/* 模擬辨識結果按鈕
+
+        <div className="mt-4">
         <button
           onClick={handleMockDetection}
           className="rounded-full border border-dashed border-gray-400 px-6 py-2 text-sm font-semibold text-gray-500 transition hover:border-gray-600 hover:text-gray-700"
         >
           模擬辨識結果
         </button>
-      </div>
+      </div> */}
+
     </div>
   );
 };
@@ -455,6 +462,10 @@ const RecommendationPage = ({ COLORS, onDetectionResult }) => {
 // --- 子頁面 4：分析頁 (加大內容區 + 完美平手邏輯版) ---
 const AnalysisPage = ({ diaries, COLORS }) => {
   const [filterType, setFilterType] = useState('month');
+  const todayKey = new Date().toISOString().split('T')[0];
+  const todayLog = diaries[todayKey] && typeof diaries[todayKey] === 'object' ? diaries[todayKey] : null;
+  const todayEmotion = todayLog?.detectedEmotion || todayLog?.emotion || '';
+  const todayMovies = Array.isArray(todayLog?.recommendedMovies) ? todayLog.recommendedMovies : [];
 
   // 1. 根據日期篩選日記數據
   const stats = useMemo(() => {
@@ -509,7 +520,65 @@ const AnalysisPage = ({ diaries, COLORS }) => {
         </div>
       </div>
 
-      {totalLogs > 0 ? (
+      {filterType === 'day' ? (
+        <div className="w-full max-w-4xl bg-white rounded-[40px] shadow-2xl p-12 border border-orange-50">
+          {todayEmotion || todayMovies.length > 0 ? (
+            <div className="space-y-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.3em] text-gray-400">今日心情</p>
+                  <h3 className="text-5xl font-black mt-3" style={{ color: COLORS[todayEmotion] || '#6b7280' }}>{todayEmotion || '尚未辨識'}</h3>
+                </div>
+                {todayLog?.lastDetectedAt && (
+                  <span className="rounded-full bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-500">
+                    最近更新：{new Date(todayLog.lastDetectedAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
+              <div className="rounded-[30px] border border-gray-100 bg-gray-50/60 p-8">
+                <h4 className="text-2xl font-bold text-gray-700 mb-4">今日電影清單</h4>
+                {todayMovies.length > 0 ? (
+                  <ul className="space-y-4">
+                    {todayMovies.map((movie, idx) => (
+                      <li key={idx} className="rounded-2xl bg-white p-4 shadow-sm border border-gray-100">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <p className="text-xl font-bold text-gray-800">
+                              {movie?.title?.zh || movie?.title?.en || movie?.title || '未命名作品'}
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1">導演：{movie?.director || '未知'}</p>
+                            <p className="text-sm text-gray-500 mt-1">
+                              類型：{Array.isArray(movie?.genres) ? movie.genres.join(' / ') : '未知'}
+                              {movie?.runtime ? `｜片長：${movie.runtime} 分鐘` : ''}
+                            </p>
+                          </div>
+                          {movie?.trailer && (
+                            <a
+                              href={movie.trailer}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-3 inline-flex items-center text-blue-600 font-semibold hover:underline"
+                            >
+                              ▶ 預告片
+                            </a>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500">今日尚未產生推薦電影，請至推薦頁進行一次辨識。</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-[40px] border-4 border-dashed border-gray-200 bg-white p-16 text-center">
+              <span className="text-6xl block mb-4 opacity-30">🎯</span>
+              <p className="text-gray-500 text-lg">今日尚未有辨識紀錄，請至推薦頁進行一次情緒偵測。</p>
+            </div>
+          )}
+        </div>
+      ) : totalLogs > 0 ? (
         /* 外層大框格：寬度 max-w-6xl，垂直內距加大 p-20 */
         <div className="w-full max-w-6xl bg-white rounded-[50px] shadow-2xl p-16 md:p-20 flex flex-col md:flex-row items-stretch border border-orange-50">
 
@@ -633,6 +702,14 @@ const App = () => {
     });
   }, [setDiaries]);
 
+  const handleResetDiaries = useCallback(() => {
+    const confirmed = window.confirm('確定要清空所有心情紀錄嗎？此操作無法復原。');
+    if (!confirmed) return;
+    localStorage.removeItem('emotion_diaries');
+    setDiaries({});
+    alert('已清空所有心情紀錄。');
+  }, [setDiaries]);
+
   // 當 diaries 更新時，自動存入 LocalStorage
   useEffect(() => {
     localStorage.setItem('emotion_diaries', JSON.stringify(diaries));
@@ -656,10 +733,19 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-[#FFFBF0]">
-      <nav className="flex bg-cyan-100 p-4 space-x-8 text-xl font-bold shadow-sm">
-        {['首頁', '推薦', '分析'].map((item) => (
-          <button key={item} onClick={() => setCurrentPage(item)} className={`${currentPage === item ? 'text-blue-500' : 'text-gray-600'} hover:text-blue-400 transition-colors`}>{item}</button>
-        ))}
+      <nav className="flex items-center justify-between bg-cyan-100 p-4 text-xl font-bold shadow-sm">
+        <div className="flex space-x-8">
+          {['首頁', '推薦', '分析'].map((item) => (
+            <button key={item} onClick={() => setCurrentPage(item)} className={`${currentPage === item ? 'text-blue-500' : 'text-gray-600'} hover:text-blue-400 transition-colors`}>{item}</button>
+          ))}
+        </div>
+        {/*   // 右側清空按鈕
+        <button
+          onClick={handleResetDiaries}
+          className="rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-500 transition hover:border-red-300 hover:text-red-600"
+        >
+          清空紀錄
+        </button> */}
       </nav>
       <main className="container mx-auto">
         {currentPage === '首頁' && <HomePage viewDate={viewDate} setViewDate={setViewDate} diaries={diaries} COLORS={COLORS} setEditingDate={setEditingDate} setDiaryTitle={setDiaryTitle} setSelectedEmotion={setSelectedEmotion} setDiaryContent={setDiaryContent} setCurrentPage={setCurrentPage} />}
