@@ -130,15 +130,6 @@ const DiaryPage = ({ editingDate, setEditingDate, diaries, diaryTitle, setDiaryT
         />
       </div>
 
-      <div className="flex items-center space-x-8 mb-10">
-        <span className="text-3xl font-bold text-gray-700 tracking-widest">心情：</span>
-        <div className="flex space-x-4">
-          {Object.keys(COLORS).map(e => (
-            <button key={e} onClick={() => setSelectedEmotion(e)} className={`px-8 py-3 rounded-full border-2 text-xl font-bold transition-all ${selectedEmotion === e ? 'text-white shadow-lg scale-110' : 'text-gray-400 border-gray-100 hover:border-gray-200'}`} style={{ backgroundColor: selectedEmotion === e ? COLORS[e] : 'transparent', borderColor: selectedEmotion === e ? COLORS[e] : '' }}>{e}</button>
-          ))}
-        </div>
-      </div>
-
       <textarea
         key={`content-${editingDate}`}
         ref={contentRef}
@@ -313,38 +304,38 @@ const RecommendationPage = ({ COLORS, onDetectionResult }) => {
     await handleDetection();
   };
   // 模擬辨識結果按鈕處理函式
-  // const handleMockDetection = () => {
-  //   if (isScanning) return;
-  //   stopCamera();
-  //   const mockEmotion = '開心';
-  //   const mockMovies = [
-  //     {
-  //       title: { zh: '天氣之子', en: 'Weathering With You' },
-  //       director: '新海誠',
-  //       genres: ['動畫', '奇幻'],
-  //       runtime: 112,
-  //       release_date: '2019-07-19',
-  //       trailer: 'https://www.youtube.com/watch?v=Q6iK6DjV_iE',
-  //     },
-  //     {
-  //       title: { zh: '怪獸與牠們的產地', en: 'Fantastic Beasts and Where to Find Them' },
-  //       director: 'David Yates',
-  //       genres: ['奇幻', '冒險'],
-  //       runtime: 133,
-  //       release_date: '2016-11-18',
-  //       trailer: 'https://www.youtube.com/watch?v=ViuDsy7yb8M',
-  //     },
-  //   ];
+  const handleMockDetection = () => {
+    if (isScanning) return;
+    stopCamera();
+    const mockEmotion = '開心';
+    const mockMovies = [
+      {
+        title: { zh: '天氣之子', en: 'Weathering With You' },
+        director: '新海誠',
+        genres: ['動畫', '奇幻'],
+        runtime: 112,
+        release_date: '2019-07-19',
+        trailer: 'https://www.youtube.com/watch?v=Q6iK6DjV_iE',
+      },
+      {
+        title: { zh: '怪獸與牠們的產地', en: 'Fantastic Beasts and Where to Find Them' },
+        director: 'David Yates',
+        genres: ['奇幻', '冒險'],
+        runtime: 133,
+        release_date: '2016-11-18',
+        trailer: 'https://www.youtube.com/watch?v=ViuDsy7yb8M',
+      },
+    ];
 
-  //   setDetectedEmotion(mockEmotion);
-  //   setMovies(mockMovies);
-  //   setShowResult(true);
-  //   setShowMovieModal(true);
+    setDetectedEmotion(mockEmotion);
+    setMovies(mockMovies);
+    setShowResult(true);
+    setShowMovieModal(true);
 
-  //   if (typeof onDetectionResult === 'function') {
-  //     onDetectionResult({ emotion: mockEmotion, movies: mockMovies });
-  //   }
-  // };
+    if (typeof onDetectionResult === 'function') {
+      onDetectionResult({ emotion: mockEmotion, movies: mockMovies });
+    }
+  };
 
   // 建立 WebSocket 連線
   useEffect(() => {
@@ -449,14 +440,14 @@ const RecommendationPage = ({ COLORS, onDetectionResult }) => {
           return <button disabled className="bg-gray-300 text-gray-500 px-12 py-4 rounded-full font-bold text-xl cursor-not-allowed">辨識中...</button>;
         })()}
       </div>
-      {/* <div className="mt-4">
+      <div className="mt-4">
         <button
           onClick={handleMockDetection}
           className="rounded-full border border-dashed border-gray-400 px-6 py-2 text-sm font-semibold text-gray-500 transition hover:border-gray-600 hover:text-gray-700"
         >
           模擬辨識結果
         </button>
-      </div> */}
+      </div>
     </div>
   );
 };
@@ -652,7 +643,12 @@ const App = () => {
     const finalContent = contentRef.current ? contentRef.current.value : diaryContent;
     setDiaries(prev => ({
       ...prev,
-      [editingDate]: { emotion: selectedEmotion, title: finalTitle, content: finalContent }
+      [editingDate]: {
+        ...(prev[editingDate] && typeof prev[editingDate] === 'object' ? prev[editingDate] : {}),
+        emotion: selectedEmotion,
+        title: finalTitle,
+        content: finalContent,
+      }
     }));
     alert(`儲存成功！`);
     setCurrentPage('首頁');
@@ -661,7 +657,7 @@ const App = () => {
   return (
     <div className="min-h-screen bg-[#FFFBF0]">
       <nav className="flex bg-cyan-100 p-4 space-x-8 text-xl font-bold shadow-sm">
-        {['首頁', '日記', '推薦', '分析'].map((item) => (
+        {['首頁', '推薦', '分析'].map((item) => (
           <button key={item} onClick={() => setCurrentPage(item)} className={`${currentPage === item ? 'text-blue-500' : 'text-gray-600'} hover:text-blue-400 transition-colors`}>{item}</button>
         ))}
       </nav>
