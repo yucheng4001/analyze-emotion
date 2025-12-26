@@ -2,6 +2,25 @@ import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import mqtt from 'mqtt';
 
+const EMOTION_CODE_TO_LABEL = {
+  happy: '開心',
+  angry: '生氣',
+  sad: '難過',
+  neutral: '平淡',
+};
+
+const normalizeEmotionLabel = (value) => {
+  if (!value) return '';
+  return EMOTION_CODE_TO_LABEL[value] || value;
+};
+
+const resolveEmotionColor = (value, palette) => {
+  if (!value || !palette) return undefined;
+  if (palette[value]) return palette[value];
+  const normalized = normalizeEmotionLabel(value);
+  return palette[normalized];
+};
+
 
 
 // --- 子頁面 1：首頁 ---
@@ -38,9 +57,10 @@ const HomePage = ({ viewDate, setViewDate, diaries, COLORS, setEditingDate, setD
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
             const savedData = diaries[dateStr];
             const tooltipMovies = Array.isArray(savedData?.recommendedMovies) ? savedData.recommendedMovies : [];
-            const hasDetection = Boolean(savedData?.detectedEmotion || tooltipMovies.length > 0);
-            const emotionLabel = savedData?.detectedEmotion || savedData?.emotion;
-            const bubbleColor = emotionLabel && COLORS[emotionLabel] ? COLORS[emotionLabel] : null;
+            const storedEmotion = savedData?.detectedEmotion || savedData?.emotion || savedData?.detectedEmotionCode;
+            const emotionLabel = normalizeEmotionLabel(storedEmotion);
+            const hasDetection = Boolean(storedEmotion || tooltipMovies.length > 0);
+            const bubbleColor = resolveEmotionColor(storedEmotion, COLORS) || null;
             const hasDiaryContent = Boolean(savedData?.content);
 
             return (
@@ -50,7 +70,8 @@ const HomePage = ({ viewDate, setViewDate, diaries, COLORS, setEditingDate, setD
                   setEditingDate(dateStr);
                   const data = diaries[dateStr];
                   setDiaryTitle(data ? data.title : "");
-                  setSelectedEmotion(data ? data.emotion : "");
+                  const editorEmotion = data ? normalizeEmotionLabel(data.emotion || data.detectedEmotion || data.detectedEmotionCode) : '開心';
+                  setSelectedEmotion(editorEmotion || '開心');
                   setDiaryContent(data ? data.content : "");
                   setCurrentPage('日記');
                 }}
@@ -126,7 +147,8 @@ const DiaryPage = ({ editingDate, setEditingDate, diaries, diaryTitle, setDiaryT
             setEditingDate(e.target.value);
             const data = diaries[e.target.value];
             setDiaryTitle(data ? data.title : "");
-            setSelectedEmotion(data ? data.emotion : "");
+            const normalized = data ? normalizeEmotionLabel(data.emotion || data.detectedEmotion || data.detectedEmotionCode) : '開心';
+            setSelectedEmotion(normalized || '開心');
             setDiaryContent(data ? data.content : "");
           }}
           className="text-2xl border-b-2 border-gray-300 outline-none py-2 text-gray-600 focus:border-blue-400"
@@ -161,6 +183,7 @@ const RecommendationPage = ({ COLORS, onDetectionResult }) => {
 
   const startCamera = async () => {
     setShowResult(false);
+    setShowMovieModal(false);
     setIsStreamActive(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -212,6 +235,7 @@ const RecommendationPage = ({ COLORS, onDetectionResult }) => {
 
   const handleDetection = async () => {
     if (!videoRef.current) return;
+    setShowMovieModal(false);
     setIsScanning(true);
     let pendingEmotion = detectedEmotion;
     let shouldShowResult = false;
@@ -240,10 +264,12 @@ const RecommendationPage = ({ COLORS, onDetectionResult }) => {
       }
 
       if (data.emotion) {
-        pendingEmotion = data.emotion;
+        const emotionCode = data.emotion;
+        const normalizedEmotion = normalizeEmotionLabel(emotionCode) || '平淡';
+        pendingEmotion = normalizedEmotion;
 
         const movieRes = await fetch(
-          `http://localhost:8000/recommend-movies?emotion=${data.emotion}`
+          `http://localhost:8000/recommend-movies?emotion=${emotionCode}`
         );
 
         if (!movieRes.ok) {
@@ -255,7 +281,7 @@ const RecommendationPage = ({ COLORS, onDetectionResult }) => {
         setMovies(movieList);
 
         if (typeof onDetectionResult === "function") {
-          onDetectionResult({ emotion: pendingEmotion, movies: movieList });
+          onDetectionResult({ emotion: normalizedEmotion, emotionCode, movies: movieList });
         }
 
         shouldShowResult = true;
@@ -266,14 +292,20 @@ const RecommendationPage = ({ COLORS, onDetectionResult }) => {
       console.error("辨識失敗:", err);
       errorMessage = err.message || "無法連線至辨識伺服器，請確保後端已啟動。";
     } finally {
-      if (shouldShowResult) {
+      const shouldDisplayResult = shouldShowResult;
+
+      if (shouldDisplayResult) {
         setDetectedEmotion(pendingEmotion);
         stopCamera();
         setShowResult(true);
+      }
+
+      setIsScanning(false);
+
+      if (shouldDisplayResult) {
+        await sleep(1750);
         setShowMovieModal(true);
       }
-      
-      setIsScanning(false);
 
       if (errorMessage) {
         alert(errorMessage);
@@ -380,16 +412,16 @@ const RecommendationPage = ({ COLORS, onDetectionResult }) => {
         {showResult && (
           <div className="absolute inset-0 bg-white/95 flex flex-col items-center justify-center animate-fade-in text-center p-8">
             <p className="text-gray-400 font-bold mb-2 uppercase tracking-tighter">偵測結果</p>
-            <h3 className="text-7xl font-black mb-4" style={{ color: COLORS[detectedEmotion] }}>{detectedEmotion}</h3>
+            <h3 className="text-7xl font-black mb-4" style={{ color: resolveEmotionColor(detectedEmotion, COLORS) || '#374151' }}>{detectedEmotion}</h3>
             <p className="text-gray-500 italic">為您生成專屬電影清單中...</p>
           </div>
         )}
         {showResult && showMovieModal && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-            <div className="bg-white rounded-3xl p-8 max-w-3xl w-full shadow-2xl relative">
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 sm:py-10 bg-black/60">
+            <div className="relative w-full max-w-3xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
               <button
                 onClick={() => setShowMovieModal(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-black"
+                className="absolute top-4 right-4 text-2xl leading-none text-gray-400 transition hover:text-black"
               >
                 ✕
               </button>
@@ -464,7 +496,7 @@ const AnalysisPage = ({ diaries, COLORS }) => {
   const [filterType, setFilterType] = useState('month');
   const todayKey = new Date().toISOString().split('T')[0];
   const todayLog = diaries[todayKey] && typeof diaries[todayKey] === 'object' ? diaries[todayKey] : null;
-  const todayEmotion = todayLog?.detectedEmotion || todayLog?.emotion || '';
+  const todayEmotion = normalizeEmotionLabel(todayLog?.detectedEmotion || todayLog?.emotion || todayLog?.detectedEmotionCode);
   const todayMovies = Array.isArray(todayLog?.recommendedMovies) ? todayLog.recommendedMovies : [];
 
   // 1. 根據日期篩選日記數據
@@ -484,7 +516,8 @@ const AnalysisPage = ({ diaries, COLORS }) => {
     });
 
     filteredEntries.forEach(([_, d]) => {
-      if (counts[d.emotion] !== undefined) counts[d.emotion]++;
+      const normalized = normalizeEmotionLabel(d.emotion || d.detectedEmotion || d.detectedEmotionCode);
+      if (counts[normalized] !== undefined) counts[normalized]++;
     });
 
     return Object.keys(counts)
@@ -527,7 +560,7 @@ const AnalysisPage = ({ diaries, COLORS }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.3em] text-gray-400">今日心情</p>
-                  <h3 className="text-5xl font-black mt-3" style={{ color: COLORS[todayEmotion] || '#6b7280' }}>{todayEmotion || '尚未辨識'}</h3>
+                  <h3 className="text-5xl font-black mt-3" style={{ color: resolveEmotionColor(todayEmotion, COLORS) || '#6b7280' }}>{todayEmotion || '尚未辨識'}</h3>
                 </div>
                 {todayLog?.lastDetectedAt && (
                   <span className="rounded-full bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-500">
@@ -678,14 +711,15 @@ const App = () => {
   const titleRef = useRef(null);
   const contentRef = useRef(null);
 
-  const handleDetectionLog = useCallback(({ emotion, movies }) => {
+  const handleDetectionLog = useCallback(({ emotion, emotionCode, movies }) => {
     const now = new Date();
     const dateKey = now.toISOString().split('T')[0];
 
     setDiaries(prev => {
       const prevEntry = prev[dateKey] && typeof prev[dateKey] === 'object' ? prev[dateKey] : {};
       const movieList = Array.isArray(movies) ? movies : [];
-      const detectedEmotion = emotion || prevEntry.detectedEmotion || prevEntry.emotion || '平淡';
+      const normalizedEmotion = normalizeEmotionLabel(emotion) || normalizeEmotionLabel(emotionCode) || normalizeEmotionLabel(prevEntry.detectedEmotion) || normalizeEmotionLabel(prevEntry.emotion);
+      const detectedEmotion = normalizedEmotion || '平淡';
 
       return {
         ...prev,
@@ -695,6 +729,7 @@ const App = () => {
           content: prevEntry.content ?? '',
           emotion: detectedEmotion,
           detectedEmotion,
+          detectedEmotionCode: emotionCode || prevEntry.detectedEmotionCode || '',
           recommendedMovies: movieList,
           lastDetectedAt: now.toISOString(),
         },
@@ -722,7 +757,7 @@ const App = () => {
       ...prev,
       [editingDate]: {
         ...(prev[editingDate] && typeof prev[editingDate] === 'object' ? prev[editingDate] : {}),
-        emotion: selectedEmotion,
+        emotion: normalizeEmotionLabel(selectedEmotion) || '平淡',
         title: finalTitle,
         content: finalContent,
       }
